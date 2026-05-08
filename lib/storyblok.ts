@@ -32,11 +32,12 @@ async function mapi<T>(path: string, init?: RequestInit): Promise<T> {
 }
 
 export async function createEmptyStory(name: string, slug: string) {
+  const component = process.env.STORYBLOK_CONTENT_TYPE ?? 'page';
   const body = {
     story: {
       name,
       slug,
-      content: { component: 'page', body: [] },
+      content: { component, body: [] },
     },
   };
   return mapi<{ story: StoryblokStory }>('/stories', {

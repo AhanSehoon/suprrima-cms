@@ -63,7 +63,7 @@ export default function ContentListPage() {
     setError(null);
     try {
       const ts = Date.now();
-      const name = `Content ${new Date(ts).toLocaleString('ko-KR')}`;
+      const name = `Content ${new Date(ts).toLocaleString('ko-KR')}.${ts % 1000}`;
       const slug = `content-${ts}`;
       const res = await fetch('/api/contents', {
         method: 'POST',
