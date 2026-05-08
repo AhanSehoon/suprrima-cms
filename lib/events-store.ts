@@ -22,7 +22,7 @@ export async function appendEvent(event: WebhookEvent) {
 
 export async function listEventsSince(since: number): Promise<WebhookEvent[]> {
   if (!isKvConfigured()) return [];
-  const min = since > 0 ? `(${since}` : '-inf';
+  const min: `(${number}` | '-inf' = since > 0 ? `(${since}` : '-inf';
   const events = await kv.zrange<WebhookEvent[]>(KEY, min, '+inf', {
     byScore: true,
   });
