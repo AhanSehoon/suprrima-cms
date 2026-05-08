@@ -13,6 +13,7 @@ import {
 
 export default function ContentListPage() {
   const [items, setItems] = useState<ContentItem[]>([]);
+  const [name, setName] = useState('');
   const [creating, setCreating] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -58,38 +59,43 @@ export default function ContentListPage() {
     };
   }, [refresh]);
 
-  const handleCreate = useCallback(async () => {
-    setCreating(true);
-    setError(null);
-    try {
-      const ts = Date.now();
-      const name = `Content ${new Date(ts).toLocaleString('ko-KR')}.${ts % 1000}`;
-      const slug = `content-${ts}`;
-      const res = await fetch('/api/contents', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name, slug }),
-      });
-      const data = await res.json();
-      if (!res.ok) {
-        throw new Error(data.error ?? 'create failed');
+  const handleCreate = useCallback(
+    async (e: React.FormEvent) => {
+      e.preventDefault();
+      const trimmed = name.trim();
+      if (!trimmed) return;
+      setCreating(true);
+      setError(null);
+      try {
+        const slug = `content-${Date.now()}`;
+        const res = await fetch('/api/contents', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name: trimmed, slug }),
+        });
+        const data = await res.json();
+        if (!res.ok) {
+          throw new Error(data.error ?? 'create failed');
+        }
+        const item: ContentItem = {
+          id: crypto.randomUUID(),
+          storyblokId: data.storyblokId,
+          name: data.name,
+          slug: data.slug,
+          status: 'DRAFT',
+          createdAt: data.createdAt ?? new Date().toISOString(),
+        };
+        addContent(item);
+        refresh();
+        setName('');
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'unknown error');
+      } finally {
+        setCreating(false);
       }
-      const item: ContentItem = {
-        id: crypto.randomUUID(),
-        storyblokId: data.storyblokId,
-        name: data.name,
-        slug: data.slug,
-        status: 'DRAFT',
-        createdAt: data.createdAt ?? new Date().toISOString(),
-      };
-      addContent(item);
-      refresh();
-    } catch (e) {
-      setError(e instanceof Error ? e.message : 'unknown error');
-    } finally {
-      setCreating(false);
-    }
-  }, [refresh]);
+    },
+    [name, refresh],
+  );
 
   return (
     <main style={main}>
@@ -100,9 +106,24 @@ export default function ContentListPage() {
             로컬 저장소에 저장됩니다 · 3초마다 webhook 이벤트를 폴링합니다
           </p>
         </div>
-        <button onClick={handleCreate} disabled={creating} style={btnPrimary}>
-          {creating ? '생성 중...' : '+ 컨텐츠 생성'}
-        </button>
+        <form onSubmit={handleCreate} style={createForm}>
+          <input
+            type="text"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            placeholder="컨텐츠 이름"
+            style={input}
+            disabled={creating}
+            required
+          />
+          <button
+            type="submit"
+            disabled={creating || !name.trim()}
+            style={btnPrimary}
+          >
+            {creating ? '생성 중...' : '+ 생성'}
+          </button>
+        </form>
       </header>
 
       {error && <div style={errorBox}>오류: {error}</div>}
@@ -167,6 +188,21 @@ const btnPrimary: React.CSSProperties = {
   cursor: 'pointer',
   fontSize: 14,
   whiteSpace: 'nowrap',
+};
+
+const createForm: React.CSSProperties = {
+  display: 'flex',
+  gap: 8,
+  alignItems: 'center',
+};
+
+const input: React.CSSProperties = {
+  padding: '10px 12px',
+  border: '1px solid #ddd',
+  borderRadius: 6,
+  fontSize: 14,
+  minWidth: 220,
+  outline: 'none',
 };
 
 const errorBox: React.CSSProperties = {
